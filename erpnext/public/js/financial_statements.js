@@ -25,6 +25,11 @@ erpnext.financial_statements = {
 			"options": "Yearly\nHalf-yearly\nQuarterly\nMonthly",
 			"default": "Yearly",
 			"reqd": 1
+		},
+		{
+			"fieldname": "accumulated_value",
+			"label": __("Accumulated Values"),
+			"fieldtype": "Check"
 		}
 	],
 	"formatter": function(row, cell, value, columnDef, dataContext, default_formatter) {
