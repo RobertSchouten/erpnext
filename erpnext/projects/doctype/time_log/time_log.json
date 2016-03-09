@@ -137,6 +137,7 @@
    "length": 0, 
    "no_copy": 0, 
    "permlevel": 0, 
+   "precision": "2", 
    "print_hide": 0, 
    "read_only": 0, 
    "report_hide": 0, 
