@@ -24,6 +24,7 @@ class Contact(StatusUpdater):
 		self.set_status()
 		self.validate_primary_contact()
 		self.set_user()
+		self.update_communication_ref()
 
 	def set_user(self):
 		if not self.user and self.email_id:
@@ -59,6 +60,53 @@ class Contact(StatusUpdater):
 		frappe.db.sql("""update `tabIssue` set contact='' where contact=%s""",
 			self.name)
 
+	def update_communication_ref(self):
+		origin_communication = frappe.db.sql("select name, sender,recipients from `tabCommunication`",as_dict=1)
+
+		if self.email_id != "" or self.email_id is not None:
+
+			contact = [{"email_id":self.email_id,
+						"supplier":self.supplier,
+						"customer":self.customer
+						}]
+			communication = []
+
+			#format sender
+			for comm in origin_communication:
+				temp = {}
+				if isinstance(comm["sender"],basestring) and comm["sender"].find("<")>-1:
+					temp["name"] = comm["name"]
+					temp["email"] = comm["sender"][comm["sender"].find("<")+1:comm["sender"].find(">")].lower() #not sure if lower needed
+					communication.append(temp)
+
+			#format reciepient
+			for comm in origin_communication:
+				if isinstance(comm["recipients"],basestring):
+					for r in comm["recipients"].split(','):
+						temp = {}
+						temp["name"] =comm["name"]
+						temp["email"] =r.lower() #not sure if lower needed
+						communication.append(temp)
+
+			for comm in communication:
+				for tact in contact:
+					#check each item and submit
+					if tact["email_id"]==comm["email"]:
+						if tact["supplier"]is not None:
+							frappe.db.sql("""update `tabCommunication`
+								set supplier = %(supplier)s
+								where name = %(name)s""",{
+								"supplier": tact["supplier"],
+								"name": comm["name"]
+							})
+						elif tact["customer"]is not None:
+							frappe.db.sql("""update `tabCommunication`
+								set customer = %(customer)s
+								where name = %(name)s""",{
+								"customer": tact["customer"],
+								"name": comm["name"]
+							})
+	
 @frappe.whitelist()
 def invite_user(contact):
 	contact = frappe.get_doc("Contact", contact)
