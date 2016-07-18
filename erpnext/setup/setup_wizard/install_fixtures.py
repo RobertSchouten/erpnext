@@ -156,9 +156,12 @@ def install(country=None):
 			{"attribute_value": _("White"), "abbr": "WHI"}
 		]},
 
-		{'doctype': "Email Account", "email_id": "sales@example.com", "append_to": "Opportunity"},
-		{'doctype': "Email Account", "email_id": "support@example.com", "append_to": "Issue"},
-		{'doctype': "Email Account", "email_id": "jobs@example.com", "append_to": "Job Applicant"},
+		#email setup
+		{'doctype': "Domain", "email_id": "account@example.com", "password": "pass","email_server":"imap.example.com","use_imap":1,"smtp_server":"smtp.example.com"},
+
+		{'doctype': "Email Account","domain":"example.com", "email_id": "sales@example.com", "append_to": "Opportunity"},
+		{'doctype': "Email Account","domain":"example.com", "email_id": "support@example.com", "append_to": "Issue"},
+		{'doctype': "Email Account","domain":"example.com", "email_id": "jobs@example.com", "append_to": "Job Applicant"},
 
 		{"doctype": "Offer Term", "offer_term": _("Date of Joining")},
 		{"doctype": "Offer Term", "offer_term": _("Annual Salary")},
