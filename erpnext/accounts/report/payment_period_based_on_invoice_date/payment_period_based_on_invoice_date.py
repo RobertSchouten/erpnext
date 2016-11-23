@@ -47,11 +47,11 @@ def validate_filters(filters):
 def get_columns(filters):
 	return [
 		_("Payment Document") + ":Link/DocType: 100",
-		_("Payment Entry") + ":Dynamic Link/"+_("Payment Document")+":100",
-		_("Party Type") + "::90", 
-		_("Party") + ":Dynamic Link/Party Type:90",
+		_("Payment Entry") + ":Dynamic Link/"+_("Payment Document")+":140",
+		_("Party Type") + "::100", 
+		_("Party") + ":Dynamic Link/Party Type:140",
 		_("Posting Date") + ":Date:100",
-		_("Invoice") + (":Link/Purchase Invoice:100" if filters.get("payment_type") == "Outgoing" else ":Link/Sales Invoice:100"),
+		_("Invoice") + (":Link/Purchase Invoice:130" if filters.get("payment_type") == "Outgoing" else ":Link/Sales Invoice:130"),
 		_("Invoice Posting Date") + ":Date:130", 
 		_("Payment Due Date") + ":Date:130", 
 		_("Debit") + ":Currency:120", 

@@ -55,14 +55,14 @@ def execute(filters=None):
 def get_columns(group_wise_columns, filters):
 	columns = []
 	column_map = frappe._dict({
-		"parent": _("Sales Invoice") + ":Link/Sales Invoice:120",
-		"posting_date": _("Posting Date") + ":Date",
+		"parent": _("Sales Invoice") + ":Link/Sales Invoice:100",
+		"posting_date": _("Posting Date") + ":Date:100",
 		"posting_time": _("Posting Time"),
-		"item_code": _("Item Code") + ":Link/Item",
-		"item_name": _("Item Name"),
-		"item_group": _("Item Group") + ":Link/Item Group",
+		"item_code": _("Item Code") + ":Link/Item:120",
+		"item_name": _("Item Name") + ":Item Name:120",
+		"item_group": _("Item Group") + ":Link/Item Group:120",
 		"brand": _("Brand"),
-		"description": _("Description"),
+		"description": _("Description")+":Desacription:120",
 		"warehouse": _("Warehouse") + ":Link/Warehouse",
 		"qty": _("Qty") + ":Float",
 		"base_rate": _("Avg. Selling Rate") + ":Currency/currency",
@@ -74,7 +74,7 @@ def get_columns(group_wise_columns, filters):
 		"project": _("Project") + ":Link/Project",
 		"sales_person": _("Sales person"),
 		"allocated_amount": _("Allocated Amount") + ":Currency/currency",
-		"customer": _("Customer") + ":Link/Customer",
+		"customer": _("Customer") + ":Link/Customer:120",
 		"customer_group": _("Customer Group") + ":Link/Customer Group",
 		"territory": _("Territory") + ":Link/Territory"
 	})

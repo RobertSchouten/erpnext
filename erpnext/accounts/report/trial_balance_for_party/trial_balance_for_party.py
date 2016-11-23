@@ -137,7 +137,7 @@ def get_columns(filters, show_party_name):
 			"label": _(filters.party_type),
 			"fieldtype": "Link",
 			"options": filters.party_type,
-			"width": 200
+			"width": 120
 		},
 		{
 			"fieldname": "opening_debit",

@@ -64,11 +64,11 @@ def execute(filters=None):
 def get_columns(invoice_list):
 	"""return columns based on filters"""
 	columns = [
-		_("Invoice") + ":Link/Purchase Invoice:120", _("Posting Date") + ":Date:80", 
-		_("Supplier Id") + "::120", _("Supplier Name") + "::120", 
+		_("Invoice") + ":Link/Purchase Invoice:100", _("Posting Date") + ":Date:80", 
+		_("Supplier Id") + "::100", _("Supplier Name") + "::150", 
 		_("Supplier Type") + ":Link/Supplier Type:120", _("Payable Account") + ":Link/Account:120", 
 		_("Mode of Payment") + ":Link/Mode of Payment:80", _("Project") + ":Link/Project:80", 
-		_("Bill No") + "::120", _("Bill Date") + ":Date:80", _("Remarks") + "::150",
+		_("Bill No") + "::120", _("Bill Date") + ":Date:80", _("Remarks") + "::200",
 		_("Purchase Order") + ":Link/Purchase Order:100", 
 		_("Purchase Receipt") + ":Link/Purchase Receipt:100",
 		{

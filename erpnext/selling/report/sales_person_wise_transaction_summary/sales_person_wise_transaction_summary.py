@@ -35,8 +35,8 @@ def get_columns(filters):
 	if not filters.get("doc_type"):
 		msgprint(_("Please select the document type first"), raise_exception=1)
 
-	return [filters["doc_type"] + ":Link/" + filters["doc_type"] + ":140",
-		_("Customer") + ":Link/Customer:140", _("Territory") + ":Link/Territory:100", _("Posting Date") + ":Date:100",
+	return [filters["doc_type"] + ":Link/" + filters["doc_type"] + ":100",
+		_("Customer") + ":Link/Customer:120", _("Territory") + ":Link/Territory:120", _("Posting Date") + ":Date:100",
 		_("Item Code") + ":Link/Item:120", _("Item Group") + ":Link/Item Group:120",
 		_("Brand") + ":Link/Brand:120", _("Qty") + ":Float:100", _("Amount") + ":Currency:120",
 		_("Sales Person") + ":Link/Sales Person:140", _("Contribution %") + "::110",
