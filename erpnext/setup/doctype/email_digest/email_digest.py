@@ -95,7 +95,7 @@ class EmailDigest(Document):
 		quote = get_random_quote()
 		context.quote = {"text": quote[0], "author": quote[1]}
 
-		if not (context.events or context.todo_list or context.notifications or context.cards):
+		if not (context.events or context.todo_list or context.issue_list or context.project_list or context.notifications or context.cards):
 			return None
 
 		frappe.flags.ignore_account_permission = False
@@ -127,6 +127,8 @@ class EmailDigest(Document):
 		context.section_head = 'margin-top: 60px; font-size: 16px;'
 		context.line_item  = 'padding: 5px 0px; margin: 0; border-bottom: 1px solid #d1d8dd;'
 		context.link_css = 'color: {text_color}; text-decoration: none;'.format(text_color = context.text_color)
+		context.table_row = 'padding: 5px 0px; margin: 0; border-top: 1px solid #d1d8dd;'
+		context.table_base = 'padding-bottom: 10px;'
 
 
 	def get_notifications(self):
@@ -207,15 +209,53 @@ class EmailDigest(Document):
 
 	def get_project_list(self, user_id=None):
 		"""Get project list"""
-		if not user_id:
-			user_id = frappe.session.user
+		# if not user_id:
+		# 	user_id = frappe.session.user
 
-		project_list = frappe.db.sql("""select *
-			from `tabProject` where status='Open' and project_type='External'
-			order by modified asc limit 10""", as_dict=True)
+		# project_list = frappe.db.sql("""select *
+		# 	from `tabProject` where status='Open' and project_type='External'
+		# 	order by modified asc limit 10""", as_dict=True)
+		
+		project_list = frappe.db.get_values("Project",  {'status':'Open', 'project_type':'External'}, 
+			['name', 'project_name'], order_by='modified', as_dict=1)
 
+		employee_hrly_cost = frappe._dict()
+		
+		for project in project_list:
+			income = frappe.db.get_all("Sales Order Item", {'docstatus': ("!=", 2), 'project': project.name},
+				['sum(amount) as total'])[0].total or 0
+			
+			expense = frappe.db.get_all("BOM", {'docstatus': ("!=", 2), 'project': project.name},
+				['sum(raw_material_cost) as total'])[0].total or 0
+			
+			expense += frappe.db.sql("""select
+				sum(total_sanctioned_amount) as total_sanctioned_amount
+				from `tabExpense Claim` where project = %s and approval_status='Approved'
+				and docstatus = 1""",
+				self.name, as_dict=1)[0].total_sanctioned_amount or 0
+			
+			wages_cost = 0.0
+			
+			for employee_hrs in frappe.db.sql("""select sum(tsd.hours) as total, ts.employee
+				from `tabTimesheet Detail` as tsd, `tabTimesheet` as ts
+				where tsd.project = %s and tsd.parent = ts.name and ts.docstatus !=2
+				group by ts.employee""", project.name, as_dict=1):
+				
+				if not employee_hrly_cost[employee_hrs.employee]:
+					employee_hrly_cost[employee_hrs.employee] = 23
+					
+				wages_cost += employee_hrs.total * employee_hrly_cost[employee_hrs.employee]#get actual wage cost
+			
+			
+
+			project.profit_value = income - expense - wages_cost
+			project.profit = fmt_money(project.profit_value, 0 , self.currency)
+			project.income = fmt_money(income, 0 , self.currency)
+			project.expense = fmt_money(expense, 0 , self.currency)
+			project.wages_cost = fmt_money(wages_cost, 0 , self.currency)
+			
 		for t in project_list:
-			t.link = get_url_to_form("Issue", t.name)
+			t.link = get_url_to_form("Project", t.name)
 
 		return project_list
 

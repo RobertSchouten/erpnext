@@ -5,6 +5,8 @@
 from __future__ import unicode_literals
 import frappe
 from frappe import _
+from erpnext.controllers.accounts_controller import AccountsController
+from erpnext.accounts.general_ledger import delete_gl_entries
 
 import json
 from datetime import timedelta
@@ -19,7 +21,7 @@ from erpnext.manufacturing.doctype.manufacturing_settings.manufacturing_settings
 class OverlapError(frappe.ValidationError): pass
 class OverProductionLoggedError(frappe.ValidationError): pass
 
-class Timesheet(Document):
+class Timesheet(AccountsController):
 	def validate(self):
 		self.set_employee_name()
 		self.set_status()
@@ -94,10 +96,28 @@ class Timesheet(Document):
 		self.update_production_order(None)
 		self.update_task_and_project()
 
+		#clear project costings
+		#self.delete_jv_entries()
+		delete_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
+		
+
+	def delete_jv_entries(self):
+		jv_entries = frappe.db.sql("""select distinct je.name 
+			from `tabJournal Entry` as je, `tabJournal Entry Account` as jea
+			where je.name = jea.parent and
+			jea.reference_name = %s""",(self.name),as_dict=1)
+		for jv in jv_entries:
+			doc = frappe.get_doc("Journal Entry", jv.name)
+			doc.cancel()
+			doc.delete()
+		
 	def on_submit(self):
 		self.validate_mandatory_fields()
 		self.update_production_order(self.name)
 		self.update_task_and_project()
+		
+		# #make project costings
+		self.transfer_wage_cost_to_project()
 
 	def validate_mandatory_fields(self):
 		if self.production_order:
@@ -267,6 +287,180 @@ class Timesheet(Document):
 					data.costing_rate = flt(rate.get('costing_rate')) if flt(data.costing_rate) == 0 else data.costing_rate
 					data.billing_amount = data.billing_rate * hours
 					data.costing_amount = data.costing_rate * hours
+
+	def transfer_wage_cost_to_project(self):
+		found = False
+		# jv_list = []
+		gl_entries =[]
+
+		from frappe.utils import get_number_format_info
+		currency = frappe.db.get_value("Company", self.company, "default_currency", cache=True)
+		if currency:
+			number_format = frappe.db.get_value("Currency", currency, "number_format", cache=True)
+		if not number_format:
+			number_format = frappe.db.get_default("number_format") or "#,###.##"
+		decimal_str, comma_str, precision = get_number_format_info(number_format)
+		
+		self.posting_date = self.end_date
+		for time_log in self.time_logs:
+			if time_log.project:
+				if not found:
+					structure, from_cost_center = self.get_salary_structure_costing()
+					# jv_list.append(frappe._dict({
+					# 	"account": structure.project_costing_account,  # get account from salary structure earning type?
+					# 	"cost_center": from_cost_center,
+					# 	"remarks": "Project Wages Transfer",  # generate sting wages transfer to project
+					# 	"credit_in_account_currency": 0,
+					# 	"reference_type": self.doctype,
+					# 	"reference_name": self.name
+					# }))
+					# amount_for_credit = 0
+				found = True
+
+				to_cost_center = frappe.db.get_value("Project", time_log.project, "cost_center")
+				if not to_cost_center:
+					frappe.throw(
+						_("Cost Center Required for Project Please Configure in Project {0}").format(time_log.project))
+
+				amount = flt(time_log.hours * structure.costing_hourly_rate, precision)
+				
+				# jv_list.append(frappe._dict({
+				# 	"account": structure.project_costing_account,  # get account from salary structure earning type?
+				# 	"cost_center": to_cost_center,
+				# 	"project": time_log.project,
+				# 	"remarks": "Project Wages Transfer",  # generate sting wages transfer to project
+				# 	"debit_in_account_currency": amount,
+				# 	"reference_type": self.doctype,
+				# 	"reference_name": self.name
+				# }))
+				# amount_for_credit += amount
+				gl_entries.append(self.get_gl_dict({
+					"account": structure.project_costing_account,
+					"against": structure.project_costing_account,
+					"cost_center": from_cost_center,
+					"remarks": "Project Wages Transfer",  # generate sting wages transfer to project
+					"credit": amount
+				}))
+				gl_entries.append(self.get_gl_dict({
+					"account": structure.project_costing_account,
+					"against": structure.project_costing_account,
+					"cost_center": to_cost_center,
+					"project": time_log.project,
+					"remarks": "Project Wages Transfer",  # generate sting wages transfer to project
+					"debit": amount
+				}))
+
+		if found:
+			# jv_list[0].credit_in_account_currency = amount_for_credit
+			# entry = frappe.get_doc({
+			# 	"doctype": "Journal Entry",
+			# 	"posting_date": self.end_date,
+			# 	"accounts": jv_list
+			# })
+			# entry.insert()
+			# entry.submit()
+			from erpnext.accounts.general_ledger import make_gl_entries
+			make_gl_entries(gl_entries)
+########################################
+		# found = False
+		# jv_list = []
+		# amount_for_credit = 0
+		# for time_log in self.time_logs:
+		# 	if time_log.project:
+		# 
+		# 		if not found:  # generate expenses and pull earnings accounts and hourly rates
+		# 			jv_list.append(frappe._dict({
+		# 				"account": "Wages & Salaries - IAG",  # get account from salary structure earning type?
+		# 				"cost_center": "_Not Yet Allocated - IAG",
+		# 				"remarks": "wages transfer",  # generate sting wages transfer to project
+		# 				"credit_in_account_currency": 2000
+		# 			}))
+		# 		found = True
+		# 		# generate list of projects and hours
+		# 
+		# 
+		# 
+		# 		cost = 2000
+		# 		jv_list.append(frappe._dict({
+		# 			"account": "Wages & Salaries - IAG",  # get account from salary structure earning type?
+		# 			"cost_center": frappe.db.get_value("Project", time_log.project,
+		# 				"cost_center") or "ACA - AM - Products/Projects - IAG",
+		# 			"project": time_log.project,
+		# 			"remarks": "wages transfer",  # generate sting wages transfer to project
+		# 			"debit_in_account_currency": cost
+		# 		}))
+		# 		amount_for_credit += cost
+		# 
+		# 
+		# 	# gl_list.append(self.get_gl_dict({
+		# 	# 	"account": account,
+		# 	# 	"against": account,
+		# 	# 	"cost_center": "ACA - AM - Products/Projects - IAG",
+		# 	# 	"project": self.get("project"),
+		# 	# 	"remarks": self.get("remarks") or "Accounting Entry for Stock", # generate sting wages transfer to project
+		# 	# 	"debit": flt(sle.stock_value_difference, 2),
+		# 	# }, warehouse_account[sle.warehouse]["account_currency"]))
+		# 	# 
+		# 	# # to target warehouse / expense account
+		# 	# gl_list.append(self.get_gl_dict({
+		# 	# 	"account": detail.expense_account,
+		# 	# 	"against": warehouse_account[sle.warehouse]["name"],
+		# 	# 	"cost_center": detail.cost_center,
+		# 	# 	"support_ticket": self.get("support_ticket"),
+		# 	# 	"remarks": self.get("remarks") or "Accounting Entry for Stock",
+		# 	# 	"credit": flt(sle.stock_value_difference, 2),
+		# 	# 	"project": detail.get("project") or self.get("project")
+		# 	# }))
+		# 
+		# if found:
+		# 	jv_list[0].credit_in_account_currency = amount_for_credit
+		# 	entry = frappe.get_doc({
+		# 		"doctype": "Journal Entry",
+		# 		"posting_date": self.end_date,
+		# 		"accounts": jv_list
+		# 	})
+		# 	entry.insert()
+		# 	entry.submit()
+		# 	# lookup hourly cost from salary structure(probably from earnings with each having an account and a figure
+		# 	# make gl entries assigning money to projects
+		# 	pass
+	def get_salary_structure_costing(self):
+		salary_structure = frappe.db.sql("""select project_costing_account, costing_hourly_rate
+			from `tabSalary Structure` as ss, `tabSalary Structure Employee` as sse
+			where ss.name = sse.parent AND 
+			sse.employee = %(employee)s and 
+			ss.is_active = 'Yes' and
+			ss.from_date < %(start_date)s and (ss.to_date is null or ss.to_date > %(end_date)s)""",
+			{"employee": self.employee, "start_date": self.start_date, "end_date": self.end_date},
+			as_dict=1)
+	
+		if salary_structure:
+			if len(salary_structure) > 1:
+				frappe.throw(
+					_("Multiple active Salary Structures found for employee {0} for the given dates")
+						.format(self.employee), title=_('Warning'))
+	
+			if salary_structure[0].costing_hourly_rate == 0:
+				frappe.throw(
+					_("Hourly Costing Rate is required in Salary Structure for employee {0}").format(
+						self.employee))
+			if salary_structure[0].project_costing_account == "" or salary_structure[
+				0].project_costing_account is None:
+				frappe.throw(
+					_("Project Costing Account is required in Salary Structure for employee {0}").format(
+						self.employee))
+			structure = salary_structure[0]
+	
+		else:
+			frappe.throw(
+				_("No active or default Salary Structure found for employee {0} for the given dates")
+					.format(self.employee), title=_('Salary Structure Missing'))
+	
+		from_cost_center = frappe.db.get_value("Company", self.company, "cost_center_for_wages", cache=True)
+		if not from_cost_center:
+			frappe.throw(_(
+				"Missing Setup: Cost Center To transfer project costing from Required Please Configure Cost Center For Wages in Company"))
+		return structure, from_cost_center
 
 @frappe.whitelist()
 def get_projectwise_timesheet_data(project, parent=None):

@@ -64,22 +64,37 @@
 <h4 style="{{ section_head }}">{{ _("Open Projects ") }}
 	<span class="badge">({{ project_count }})</span></h4>
 <div>
-{% for t in project_list %}
-    <div style="{{ line_item }}">
+     <div style="{{ line_item }}">
         <table style="width: 100%;">
             <tr>
-                <td>
+                <th style="width: 25%;">{{_("Income (Sale Ord)")}}</th>
+                <th style="width: 25%;">{{_("Expense (BOM)")}}</th>
+                <th style="width: 25%;">{{_("Wages")}}</th>
+                <th style="width: 25%;">{{_("Estimated Profit")}}</th>
+            </tr>
+{% for t in project_list %}
+            <tr>
+                <td colspan="4" style="{{ table_row }}">
                     <a style="{{ link_css }}" href="{{ t.link }}">{{ _(t.project_name) }}</a>
                 </td>
-                <td style="width: 25%; text-align: right">
-                    <span style="{{ label_css }}">
-                        {{ _(t.status) }}
-                    </span>
+            </tr>
+            <tr>
+                <td style="{{ table_base }}">
+                    {{ t.income }}
+                </td>
+                <td style="{{ table_base }}">
+                    {{ t.expense }}
+                </td>
+                <td style="{{ table_base }}">
+                    {{ t.wages_cost }}
+                </td>
+                <td style="{{ table_base }}{{ 'color:Red;' if t.profit_value < 0 else "" }}" >
+                    {{ t.profit }}
                 </td>
             </tr>
+{% endfor %}
         </table>
     </div>
-{% endfor %}
 </div>
 {% endif %}
 
