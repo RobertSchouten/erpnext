@@ -210,14 +210,14 @@ cur_frm.cscript.new_contact = function(){
 	frappe.set_route('Form', 'Contact', tn);
 }
 
-cur_frm.fields_dict['project'].get_query = function(doc, cdt, cdn) {
+cur_frm.set_query("project", "items", function(doc, cdt, cdn) {
 	return {
 		query: "erpnext.controllers.queries.get_project_name",
 		filters: {
 			'customer': doc.customer
 		}
 	}
-}
+})
 
 cur_frm.cscript.update_status = function(label, status){
 	var doc = cur_frm.doc;

@@ -225,3 +225,28 @@ def get_users_for_project(doctype, txt, searchfield, start, page_len, filters):
 @frappe.whitelist()
 def get_cost_center_name(project):
 	return frappe.db.get_value("Project", project, "cost_center")
+
+@frappe.whitelist()
+def get_sale_order(doctype, txt, searchfield, start, page_len, filters):
+	from frappe.desk.reportview import get_match_cond
+	return frappe.db.sql("""select distinct so.name, so.customer, so.title from `tabSales Order` as so, `tabSales Order Item` as soi
+			where so.name = soi.parent
+				and (soi.project = %(project)s or (ifnull(soi.project,"") = "" and so.customer = %(customer)s))
+				and so.name like %(txt)s
+				{mcond}
+			order by
+				if(locate(%(_txt)s, so.name), locate(%(_txt)s, so.name), 99999),
+				soi.project desc,
+				so.idx desc,
+				so.name
+			limit %(start)s, %(page_len)s""".format(**{
+		'key': searchfield,
+		'mcond': get_match_cond(doctype)
+	}), {
+		'txt': "%%%s%%" % txt,
+		'_txt': txt.replace("%", ""),
+		'start': start,
+		'page_len': page_len,
+		'project': filters['project'],
+		'customer': filters['customer']
+	})

@@ -275,8 +275,8 @@ def get_projectwise_timesheet_data(project, parent=None):
 		cond = "and parent = %(parent)s"
 
 	return frappe.db.sql("""select name, parent, billing_hours, billing_amount as billing_amt 
-			from `tabTimesheet Detail` where docstatus=1 and project = %(project)s {0} and billable = 1
-			and sales_invoice is null""".format(cond), {'project': project, 'parent': parent}, as_dict=1)
+			from `tabTimesheet Detail` where docstatus=1 and project in ('{1}') {0} and billable = 1
+			and sales_invoice is null""".format(cond,project), {'parent': parent}, as_dict=1)
 
 @frappe.whitelist()
 def get_timesheet(doctype, txt, searchfield, start, page_len, filters):
@@ -284,8 +284,7 @@ def get_timesheet(doctype, txt, searchfield, start, page_len, filters):
 
 	condition = ""
 	if filters.get("project"):
-		condition = "and tsd.project = %(project)s"
-
+		condition = "and tsd.project in ('{project}')".format(project=filters.get("project"))
 	return frappe.db.sql("""select distinct tsd.parent from `tabTimesheet Detail` tsd,
 			`tabTimesheet` ts where 
 			ts.status in ('Submitted', 'Payslip') and tsd.parent = ts.name and 
@@ -294,7 +293,7 @@ def get_timesheet(doctype, txt, searchfield, start, page_len, filters):
 			order by tsd.parent limit %(start)s, %(page_len)s"""
 			.format(condition=condition), {
 				"txt": "%%%s%%" % frappe.db.escape(txt),
-				"start": start, "page_len": page_len, 'project': filters.get("project")
+				"start": start, "page_len": page_len
 			})
 
 @frappe.whitelist()

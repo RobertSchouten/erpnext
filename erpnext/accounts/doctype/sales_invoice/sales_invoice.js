@@ -293,7 +293,7 @@ $.extend(cur_frm.cscript, new erpnext.accounts.SalesInvoiceController({frm: cur_
 // Hide Fields
 // ------------
 cur_frm.cscript.hide_fields = function(doc) {
-	parent_fields = ['project', 'due_date', 'is_opening', 'source', 'total_advance', 'get_advances',
+	parent_fields = ['due_date', 'is_opening', 'source', 'total_advance', 'get_advances',
 		'advances', 'sales_partner', 'commission_rate', 'total_commission', 'advances', 'from_date', 'to_date'];
 
 	if(cint(doc.is_pos) == 1) {
@@ -363,12 +363,12 @@ cur_frm.fields_dict.write_off_cost_center.get_query = function(doc) {
 
 //project name
 //--------------------------
-cur_frm.fields_dict['project'].get_query = function(doc, cdt, cdn) {
+cur_frm.set_query("project", "items", function(doc, cdt, cdn) {
 	return{
 		query: "erpnext.controllers.queries.get_project_name",
 		filters: {'customer': doc.customer}
 	}
-}
+})
 
 // Income Account in Details Table
 // --------------------------------
@@ -471,11 +471,13 @@ frappe.ui.form.on('Sales Invoice', {
 		frm.fields_dict["timesheets"].grid.get_field("time_sheet").get_query = function(doc, cdt, cdn){
 			return{
 				query: "erpnext.projects.doctype.timesheet.timesheet.get_timesheet",
-				filters: {'project': doc.project}
+				filters: {'project': doc.items.map(function(v){return v.project})
+					.filter(function(v){if (v){return v}}).join("', '")}
 			}
 		}
 	},
-
+})
+frappe.ui.form.on('Sales Invoice Item', {
 	project: function(frm){
 		frm.call({
 			method: "add_timesheet_data",
@@ -495,7 +497,8 @@ frappe.ui.form.on('Sales Invoice Timesheet', {
 				method: "erpnext.projects.doctype.timesheet.timesheet.get_timesheet_data",
 				args: {
 					'name': d.time_sheet,
-					'project': frm.doc.project || null
+					'project': frm.doc.items.map(function(v){return v.project})
+						.filter(function(v){if (v) {return v}}).join("', '") || null,
 				},
 				callback: function(r, rt) {
 					if(r.message){

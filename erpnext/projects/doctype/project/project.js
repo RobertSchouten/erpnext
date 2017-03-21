@@ -22,16 +22,12 @@ frappe.ui.form.on("Project", {
 
 		// sales order
 		frm.set_query('sales_order', function() {
-			var filters = {
-				'project': ["in", frm.doc.__islocal ? [""] : [frm.doc.name, ""]]
-			};
-
-			if (frm.doc.customer) {
-				filters["customer"] = frm.doc.customer;
-			}
-
 			return {
-				filters: filters
+				query:"erpnext.projects.doctype.project.project.get_sale_order",
+				filters: {
+					project: frm.doc.name,
+					customer: frm.doc.customer
+				}
 			}
 		});
 	},

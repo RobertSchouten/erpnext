@@ -357,3 +357,4 @@ execute:frappe.db.sql("""delete from `tabDocField` where parent in ('Time Log Ap
 erpnext.patches.v7_0.po_status_issue_for_pr_return
 erpnext.patches.v7_1.update_missing_salary_component_type
 erpnext.patches.v7_0.update_autoname_field
+erpnext.patches.v8_0.sales_project_to_item

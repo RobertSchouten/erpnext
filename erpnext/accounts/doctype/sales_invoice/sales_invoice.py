@@ -382,12 +382,14 @@ class SalesInvoice(SellingController):
 
 	def validate_proj_cust(self):
 		"""check for does customer belong to same project as entered.."""
-		if self.project and self.customer:
-			res = frappe.db.sql("""select name from `tabProject`
-				where name = %s and (customer = %s or customer is null or customer = '')""",
-				(self.project, self.customer))
-			if not res:
-				throw(_("Customer {0} does not belong to project {1}").format(self.customer,self.project))
+		if self.customer:
+			project = [i.project for i in self.items if i.project]
+			if project:
+				res = frappe.db.sql("""select name from `tabProject`
+					where name in ('{0}') and not (customer = %s or customer is null or customer = '')""".format("', '".join(project)),
+					(self.customer))
+				if res:
+					throw(_("Customer {0} does not belong to project {1}").format(self.customer, " or ".join([i[0] for i in res])))
 
 	def validate_pos(self):
 		if flt(self.paid_amount) + flt(self.write_off_amount) \
@@ -471,15 +473,16 @@ class SalesInvoice(SellingController):
 				timesheet.billing_amount = ts_doc.total_billable_amount
 
 	def update_timesheet_billing_for_project(self):
-		if not self.timesheets and self.project:
+		if not self.timesheets and [i.project for i in self.items if i.project]:
 			self.add_timesheet_data()
 		else:
 			self.calculate_billing_amount_for_timesheet()
 
 	def add_timesheet_data(self):
 		self.set('timesheets', [])
-		if self.project:
-			for data in get_projectwise_timesheet_data(self.project):
+		project = "', '".join([i.project for i in self.items if i.project])
+		if project:
+			for data in get_projectwise_timesheet_data(project):
 				self.append('timesheets', {
 						'time_sheet': data.parent,
 						'billing_hours': data.billing_hours,
@@ -640,7 +643,7 @@ class SalesInvoice(SellingController):
 							"credit_in_account_currency": item.base_net_amount \
 								if account_currency==self.company_currency else item.net_amount,
 							"cost_center": item.cost_center,
-							"project": self.project,
+							"project": item.project,
 							"support_ticket": self.support_ticket
 						}, account_currency)
 					)

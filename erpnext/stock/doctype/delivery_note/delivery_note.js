@@ -153,14 +153,14 @@ cur_frm.cscript.update_status = function(status) {
 }
 
 // ***************** Get project name *****************
-cur_frm.fields_dict['project'].get_query = function(doc, cdt, cdn) {
+cur_frm.set_query("project", "items", function(doc, cdt, cdn) {
 	return {
 		query: "erpnext.controllers.queries.get_project_name",
 		filters: {
 			'customer': doc.customer
 		}
 	}
-}
+})
 
 cur_frm.fields_dict['transporter_name'].get_query = function(doc) {
 	return{
